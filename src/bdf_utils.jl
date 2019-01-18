@@ -1,27 +1,12 @@
 # bdf_utils
-function U!(k, U)
-  for j = 1:k
-    for r = 1:k
-      if j == 1
-        U[j,r] = -r
-      else
-        U[j,r] = U[j-1,r] * ((j-1) - r)/j
-      end
-    end
-  end
+function new_U(k, cache)
+  U = cache.U
+  cache.U = @SMatrix [j==1 ? -r : U[j-1,r] * ((j-1) - r)/j for j = 1:10, r = 1:k]
 end
 
-function R!(k, ρ, cache)
+function new_R(k, ρ, cache)
   @unpack R = cache
-  for j = 1:k
-    for r = 1:k
-      if j == 1
-        R[j,r] = -r * ρ
-      else
-        R[j,r] = R[j-1,r] * ((j-1) - r * ρ)/j
-      end
-    end
-  end
+  cache.R = @SMatrix [j==1 ? -r * ρ : R[j-1,r] * ((j-1) - r * ρ)/j for j=1:k, r=1:k]
 end
 
 # This functions takes help of D2 array to create backward differences array D

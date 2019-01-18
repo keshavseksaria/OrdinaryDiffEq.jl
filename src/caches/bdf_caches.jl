@@ -373,9 +373,9 @@ function alg_cache(alg::QNDF,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUnit
 
   D = Array{typeof(u)}(undef, 1, 5)
   D2 = Array{typeof(u)}(undef, 6, 6)
-  R = fill(zero(typeof(t)), 5, 5)
-  U = fill(zero(typeof(t)), 5, 5)
-
+  R = @SMatrix zeros(typeof(t),5,5)
+  U = @SMatrix zeros(typeof(t),5,5)
+  
   for i = 1:5
     D[i] = zero(u)
     udiff[i] = zero(u)
