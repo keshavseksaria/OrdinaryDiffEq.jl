@@ -187,7 +187,7 @@ function alg_cache(alg::QNDF1,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   R = @SMatrix zeros(typeof(t),1,1)
   U = @SMatrix zeros(typeof(t),1,1)
 
-  U = new_U1(1,U)
+  U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:1, r = 1:1]
   γ, c = zero(inv((1-alg.kappa))), 1
   @oopnlsolve
 
@@ -204,7 +204,7 @@ function alg_cache(alg::QNDF1,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   D[1] = similar(u)
   D2[1] = similar(u); D2[2] = similar(u)
 
-  U = new_U(1,U)
+  U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:1, r = 1:1]
 
   atmp = similar(u,uEltypeNoUnits)
   utilde = similar(u)
@@ -270,7 +270,7 @@ function alg_cache(alg::QNDF2,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   R = @SMatrix zeros(typeof(t),2,2)
   U = @SMatrix zeros(typeof(t),2,2)
 
-  U = new_U2(2,U)
+  U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:2, r = 1:2]
 
   γ, c = zero(inv((1-alg.kappa))), 1
   @oopnlsolve
@@ -287,7 +287,7 @@ function alg_cache(alg::QNDF2,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   D[1] = similar(u); D[2] = similar(u)
   D2[1] = similar(u);  D2[2] = similar(u); D2[3] = similar(u)
 
-  U = new_U(2,U)
+  U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:2, r = 1:2]
 
   atmp = similar(u,uEltypeNoUnits)
   utilde = similar(u)
