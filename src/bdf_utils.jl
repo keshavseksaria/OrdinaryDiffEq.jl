@@ -1,7 +1,27 @@
 # bdf_utils
+function new_U1(k, cache)
+  U = cache.U
+  cache.U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:1, r = 1:1]
+end
+
+function new_U2(k, cache)
+  U = cache.U
+  cache.U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:2, r = 1:2]
+end
+
 function new_U(k, cache)
   U = cache.U
   cache.U = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r : U[j-1,r] * ((j-1) - r)/j) for j = 1:5, r = 1:5]
+end
+
+function new_R1(k, ρ, cache)
+  @unpack R = cache
+  cache.R = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r * ρ : R[j-1,r] * ((j-1) - r * ρ)/j) for j=1:1, r=1:1]
+end
+
+function new_R2(k, ρ, cache)
+  @unpack R = cache
+  cache.R = @SMatrix [r>k || j>k ? zero(eltype(U)) : (j==1 ? -r * ρ : R[j-1,r] * ((j-1) - r * ρ)/j) for j=1:2, r=1:2]
 end
 
 function new_R(k, ρ, cache)

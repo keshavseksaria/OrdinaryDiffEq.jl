@@ -184,10 +184,10 @@ function alg_cache(alg::QNDF1,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
 
   D = fill(zero(typeof(u)), 1, 1)
   D2 = fill(zero(typeof(u)), 1, 2)
-  R = fill(zero(typeof(t)), 1, 1)
-  U = fill(zero(typeof(t)), 1, 1)
+  R = @SMatrix zeros(typeof(t),1,1)
+  U = @SMatrix zeros(typeof(t),1,1)
 
-  U!(1,U)
+  U = new_U1(1,U)
   γ, c = zero(inv((1-alg.kappa))), 1
   @oopnlsolve
 
@@ -198,13 +198,13 @@ function alg_cache(alg::QNDF1,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   @iipnlcachefields
   D = Array{typeof(u)}(undef, 1, 1)
   D2 = Array{typeof(u)}(undef, 1, 2)
-  R = fill(zero(typeof(t)), 1, 1)
-  U = fill(zero(typeof(t)), 1, 1)
+  R = @SMatrix zeros(typeof(t),1,1)
+  U = @SMatrix zeros(typeof(t),1,1)
 
   D[1] = similar(u)
   D2[1] = similar(u); D2[2] = similar(u)
 
-  U!(1,U)
+  U = new_U(1,U)
 
   atmp = similar(u,uEltypeNoUnits)
   utilde = similar(u)
@@ -267,10 +267,10 @@ function alg_cache(alg::QNDF2,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
 
   D = fill(zero(typeof(u)), 1, 2)
   D2 = fill(zero(typeof(u)), 1, 3)
-  R = fill(zero(typeof(t)), 2, 2)
-  U = fill(zero(typeof(t)), 2, 2)
+  R = @SMatrix zeros(typeof(t),2,2)
+  U = @SMatrix zeros(typeof(t),2,2)
 
-  U!(2,U)
+  U = new_U2(2,U)
 
   γ, c = zero(inv((1-alg.kappa))), 1
   @oopnlsolve
@@ -281,13 +281,13 @@ function alg_cache(alg::QNDF2,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUni
   @iipnlcachefields
   D = Array{typeof(u)}(undef, 1, 2)
   D2 = Array{typeof(u)}(undef, 1, 3)
-  R = fill(zero(typeof(t)), 2, 2)
-  U = fill(zero(typeof(t)), 2, 2)
+  R = @SMatrix zeros(typeof(t),2,2)
+  U = @SMatrix zeros(typeof(t),2,2)
 
   D[1] = similar(u); D[2] = similar(u)
   D2[1] = similar(u);  D2[2] = similar(u); D2[3] = similar(u)
 
-  U!(2,U)
+  U = new_U(2,U)
 
   atmp = similar(u,uEltypeNoUnits)
   utilde = similar(u)
@@ -355,8 +355,8 @@ function alg_cache(alg::QNDF,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUnit
 
   D = fill(zero(typeof(u)), 1, 5)
   D2 = fill(zero(typeof(u)), 6, 6)
-  R = fill(zero(typeof(t)), 5, 5)
-  U = fill(zero(typeof(t)), 5, 5)
+  R = @SMatrix zeros(typeof(t),5,5)
+  U = @SMatrix zeros(typeof(t),5,5)
 
   max_order = 5
 
@@ -375,7 +375,7 @@ function alg_cache(alg::QNDF,u,rate_prototype,uEltypeNoUnits,uBottomEltypeNoUnit
   D2 = Array{typeof(u)}(undef, 6, 6)
   R = @SMatrix zeros(typeof(t),5,5)
   U = @SMatrix zeros(typeof(t),5,5)
-  
+
   for i = 1:5
     D[i] = zero(u)
     udiff[i] = zero(u)

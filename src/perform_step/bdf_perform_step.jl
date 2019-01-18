@@ -297,7 +297,7 @@ function perform_step!(integrator,cache::QNDF1ConstantCache,repeat_step=false)
     ρ = dt/dtₙ₋₁
     D[1] = uprev - uprev2   # backward diff
     if ρ != 1
-      R = new_R(k,ρ,cache)
+      R = new_R1(k,ρ,cache)
       D[1] = D[1] * (R[1] * U[1])
     end
   end
@@ -367,7 +367,7 @@ function perform_step!(integrator,cache::QNDF1Cache,repeat_step=false)
     ρ = dt/dtₙ₋₁
     @. D[1] = uprev - uprev2 # backward diff
     if ρ != 1
-      R = new_R(k,ρ,cache)
+      R = new_R1(k,ρ,cache)
       @. D[1] = D[1] * (R[1] * U[1])
     end
   end
@@ -446,8 +446,8 @@ function perform_step!(integrator,cache::QNDF2ConstantCache,repeat_step=false)
     D[1] = uprev - uprev2
     D[2] = D[1] - (uprev2 - uprev3)
     if ρ != 1
-      R = new_R(k,ρ,cache)
-      R .= R * U
+      R = new_R2(k,ρ,cache)
+      R = R * U
       D[1] = D[1] * R[1,1] + D[2] * R[2,1]
       D[2] = D[1] * R[1,2] + D[2] * R[2,2]
     end
@@ -541,8 +541,8 @@ function perform_step!(integrator,cache::QNDF2Cache,repeat_step=false)
     @. D[1] = uprev - uprev2
     @. D[2] = D[1] - (uprev2 - uprev3)
     if ρ != 1
-      R = new_R(k,ρ,cache)
-      R .= R * U
+      R = new_R2(k,ρ,cache)
+      R = R * U
       @. D[1] = D[1] * R[1,1] + D[2] * R[2,1]
       @. D[2] = D[1] * R[1,2] + D[2] * R[2,2]
     end
@@ -633,7 +633,7 @@ function perform_step!(integrator,cache::QNDFConstantCache,repeat_step=false)
       if ρ != 1
         U = new_U(k,cache)
         R = new_R(k,ρ,cache)
-        R .= R * U
+        R = R * U
         reinterpolate_history!(cache,D,R,k)
       end
     else
