@@ -127,14 +127,14 @@ function addat_non_user_cache!(integrator::ODEIntegrator,cache,idxs)
 end
 
 function deleteat!(integrator::ODEIntegrator,idxs)
-  for c in cache_iter(integrator)
+  for c in full_cache(integrator)
     deleteat!(c,idxs)
   end
   deleteat_non_user_cache!(integrator,integrator.cache,idxs)
 end
 
 function addat!(integrator::ODEIntegrator,idxs)
-  for c in cache_iter(integrator)
+  for c in full_cache(integrator)
     addat!(c,idxs)
   end
   addat_non_user_cache!(integrator,integrator.cache,idxs)
@@ -236,6 +236,7 @@ function DiffEqBase.auto_dt_reset!(integrator::ODEIntegrator)
   integrator.dt = ode_determine_initdt(integrator.u,integrator.t,
   integrator.tdir,integrator.opts.dtmax,integrator.opts.abstol,integrator.opts.reltol,
   integrator.opts.internalnorm,integrator.sol.prob,integrator)
+  integrator.destats.nf += 2
 end
 
 function DiffEqBase.set_t!(integrator::ODEIntegrator, t::Real)

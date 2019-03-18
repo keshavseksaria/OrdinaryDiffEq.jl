@@ -10,7 +10,7 @@ print_results(x) = if PRINT_TESTS; @printf("%s \n", x) end
 
 # points and storage arrays used in the interpolation tests
 const interpolation_points = 0:1//2^(4):1
-const interpolation_results_1d = fill(zero(typeof(prob_ode_linear.u0)), length(interpolation_points))
+const interpolation_results_1d = fill(zero(prob_ode_linear.u0), length(interpolation_points))
 const interpolation_results_2d = Vector{typeof(prob_ode_2Dlinear.u0)}(undef, length(interpolation_points))
 for idx in eachindex(interpolation_results_2d)
   interpolation_results_2d[idx] = zero(prob_ode_2Dlinear.u0)
@@ -176,13 +176,117 @@ regression_test(SSPRK54(), 3.5e-5, 5.5e-5)
 # SSPRK104
 regression_test(SSPRK104(), 1.5e-5, 3e-5)
 
+println("Low Storage RKs")
+
+# ORK256
+regression_test(ORK256(), 3.0e-5, 5.0e-5)
+
+# CarpenterKennedy2N54
+regression_test(CarpenterKennedy2N54(), 3.0e-5, 5.0e-5)
+
+# HSLDDRK64
+regression_test(HSLDDRK64(), 3.0e-5, 3.0e-5)
+
+# DGLDDRK73_C
+regression_test(DGLDDRK73_C(), 3.0e-4, 3.0e-4)
+
+# DGLDDRK84_C
+regression_test(DGLDDRK84_C(), 3.0e-5, 5.0e-5)
+
+# DGLDDRK84_F
+regression_test(DGLDDRK84_F(), 3.0e-5, 5.0e-5)
+
+# NDBLSRK124
+regression_test(NDBLSRK124(), 3.0e-5, 3.0e-5)
+
+# NDBLSRK134
+regression_test(NDBLSRK134(), 3.0e-5, 3.0e-5)
+
+# NDBLSRK144
+regression_test(NDBLSRK144(), 3.0e-5, 3.0e-5)
+
+# CFRLDDRK64
+regression_test(CFRLDDRK64(), 3.0e-5, 3.0e-5)
+
+# TSLDDRK74
+regression_test(TSLDDRK74(), 3.0e-5, 3.0e-5)
+
+# CKLLSRK43_2
+regression_test(CKLLSRK43_2(), 2.0e-5,3.1e-5)
+
+# CKLLSRK54_3C
+regression_test(CKLLSRK54_3C(), 3.0e-5,6.0e-5)
+
+# CKLLSRK95_4S
+regression_test(CKLLSRK95_4S(), 5.0e-5,9.5e-5)
+
+# CKLLSRK95_4C
+regression_test(CKLLSRK95_4C(), 3.0e-3,5.5e-3)
+
+# CKLLSRK95_4M
+regression_test(CKLLSRK95_4M(), 5.0e-5,9.5e-5)
+
+# CKLLSRK54_3C_3R
+regression_test(CKLLSRK54_3C_3R(), 3.0e-5,6.0e-5)
+
+# CKLLSRK54_3M_3R
+regression_test(CKLLSRK54_3M_3R(), 2.0e-5,4.0e-5)
+
+# CKLLSRK54_3N_3R
+regression_test(CKLLSRK54_3N_3R(), 4.0e-5,7.0e-5)
+
+# CKLLSRK85_4C_3R
+regression_test(CKLLSRK85_4C_3R(), 8.0e-5,1.60e-4)
+
+# CKLLSRK85_4M_3R
+regression_test(CKLLSRK85_4M_3R(), 8.0e-5,1.5e-4)
+
+# CKLLSRK85_4P_3R
+regression_test(CKLLSRK85_4P_3R(), 5.5e-5,1.1e-4)
+
+# CKLLSRK54_3N_4R
+regression_test(CKLLSRK54_3N_4R(), 3.5e-5,6.0e-5)
+
+# CKLLSRK54_3M_4R
+regression_test(CKLLSRK54_3M_4R(), 2.0e-5,4.0e-5)
+
+# CKLLSRK65_4M_4R
+regression_test(CKLLSRK65_4M_4R(), 8.0e-5,1.5e-4)
+
+# CKLLSRK85_4FM_4R
+regression_test(CKLLSRK85_4FM_4R(), 1.0,1.8)
+
+# CKLLSRK75_4M_5R
+regression_test(CKLLSRK75_4M_5R(), 8.0e-5,1.6e-4)
+
+# ParsaniKetchesonDeconinck3S32
+regression_test(ParsaniKetchesonDeconinck3S32(), 1.5e-2, 2.0e-2)
+
+# ParsaniKetchesonDeconinck3S82
+regression_test(ParsaniKetchesonDeconinck3S82(), 1.5e-3, 3.0e-3)
+
+# ParsaniKetchesonDeconinck3S53
+regression_test(ParsaniKetchesonDeconinck3S53(), 2.5e-4, 4.5e-4)
+
+# ParsaniKetchesonDeconinck3S173
+regression_test(ParsaniKetchesonDeconinck3S173(), 3.5e-5, 5.5e-5)
+
+# ParsaniKetchesonDeconinck3S94
+regression_test(ParsaniKetchesonDeconinck3S94(), 1.5e-5, 3.0e-5)
+
+# ParsaniKetchesonDeconinck3S184
+regression_test(ParsaniKetchesonDeconinck3S184(), 1.5e-5, 3.0e-5)
+
+# ParsaniKetchesonDeconinck3S105
+regression_test(ParsaniKetchesonDeconinck3S105(), 1.5e-5, 3.0e-5)
+
+# ParsaniKetchesonDeconinck3S205
+regression_test(ParsaniKetchesonDeconinck3S205(), 1.5e-5, 3.0e-5)
+
 println("RKs")
 
 # RK4
 regression_test(RK4(), 4.5e-5, 1e-4)
-
-# CarpenterKennedy2N54
-regression_test(CarpenterKennedy2N54(), 3.0e-5, 5.0e-5)
 
 # DP5
 regression_test(DP5(), 5e-6, 1e-5; test_diff1 = true, nth_der = 4, dertol = 1e-14)

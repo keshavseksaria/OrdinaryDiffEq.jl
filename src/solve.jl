@@ -13,7 +13,6 @@ function DiffEqBase.__init(
   alg::algType,timeseries_init=typeof(prob.u0)[],
   ts_init=eltype(prob.tspan)[],ks_init=[],
   recompile::Type{Val{recompile_flag}}=Val{true};
-  timeseries_steps = 1,
   saveat = eltype(prob.tspan)[],
   tstops = eltype(prob.tspan)[],
   d_discontinuities= eltype(prob.tspan)[],
@@ -40,9 +39,9 @@ function DiffEqBase.__init(
   failfactor = 2,
   beta2=nothing,
   beta1=nothing,
-  maxiters = 1000000,
+  maxiters = adaptive ? 1000000 : typemax(Int),
   dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
-  dtmin= typeof(one(eltype(prob.tspan))) <: AbstractFloat ? 10*eps(eltype(prob.tspan)) :
+  dtmin= typeof(one(eltype(prob.tspan))) <: AbstractFloat ? eps(eltype(prob.tspan)) :
          typeof(one(eltype(prob.tspan))) <: Integer ? 0 :
          eltype(prob.tspan)(1//10^(10)),
   internalnorm = ODE_DEFAULT_NORM,
@@ -57,7 +56,8 @@ function DiffEqBase.__init(
   progress_message = ODE_DEFAULT_PROG_MESSAGE,
   userdata=nothing,
   allow_extrapolation = alg_extrapolates(alg),
-  initialize_integrator=true,kwargs...) where {algType<:OrdinaryDiffEqAlgorithm,recompile_flag}
+  initialize_integrator=true,
+  alias_u0=false, kwargs...) where {algType<:OrdinaryDiffEqAlgorithm,recompile_flag}
 
   if typeof(prob.f)<:DynamicalODEFunction && typeof(prob.f.mass_matrix)<:Tuple
     if any(mm != I for mm in prob.f.mass_matrix)
@@ -90,14 +90,14 @@ function DiffEqBase.__init(
 
   # Get the control variables
 
-  if typeof(prob.u0) <: Array
-    u = recursivecopy(prob.u0)
-  elseif typeof(prob.u0) <: Number
-    u = prob.u0
-  elseif typeof(prob.u0) <: Tuple
+  if typeof(prob.u0) <: Tuple
     u = ArrayPartition(prob.u0,Val{true})
   else
-    u = deepcopy(prob.u0)
+    if alias_u0
+      u = prob.u0
+    else
+      u = recursivecopy(prob.u0)
+    end
   end
 
   uType = typeof(u)
@@ -138,7 +138,7 @@ function DiffEqBase.__init(
 
   if isinplace(prob) && typeof(u) <: AbstractArray && eltype(u) <: Number && uBottomEltypeNoUnits == uBottomEltype # Could this be more efficient for other arrays?
     if !(typeof(u) <: ArrayPartition)
-      rate_prototype = similar(u,typeof(oneunit(uBottomEltype)/oneunit(tType)))
+      rate_prototype = recursivecopy(u)
     else
       rate_prototype = similar(u, typeof.(oneunit.(recursive_bottom_eltype.(u.x))./oneunit(tType))...)
     end
@@ -177,7 +177,7 @@ function DiffEqBase.__init(
 
   if !adaptive && save_everystep && tspan[2]-tspan[1] != Inf
     dt == 0 ? steps = length(tstops) :
-              steps = ceil(Int,internalnorm((tspan[2]-tspan[1])/dt))
+              steps = ceil(Int,internalnorm((tspan[2]-tspan[1])/dt,tspan[1]))
     sizehint!(timeseries,steps+1)
     sizehint!(ts,steps+1)
     sizehint!(ks,steps+1)
@@ -206,6 +206,10 @@ function DiffEqBase.__init(
       copyat_or_push!(timeseries,1,u_initial,Val{false})
       copyat_or_push!(ks,1,[ks_prototype])
     end
+
+    if typeof(alg) <: OrdinaryDiffEqCompositeAlgorithm
+      copyat_or_push!(alg_choice,1,1)
+    end
   else
     saveiter = 0 # Starts at 0 so first save is at 1
     saveiter_dense = 0
@@ -215,17 +219,15 @@ function DiffEqBase.__init(
 
   k = rateType[]
 
-  if uType <: Array
-    uprev = copy(u)
+  if uses_uprev(alg, adaptive) || calck
+    uprev = recursivecopy(u)
   else
-    uprev = deepcopy(u)
+    # Some algorithms do not use `uprev` explicitly. In that case, we can save
+    # some memory by aliasing `uprev = u`, e.g. for "2N" low storage methods.
+    uprev = u
   end
   if allow_extrapolation
-    if uType <: Array
-      uprev2 = copy(u)
-    else
-      uprev2 = deepcopy(u)
-    end
+    uprev2 = recursivecopy(u)
   else
     uprev2 = uprev
   end
@@ -248,7 +250,7 @@ function DiffEqBase.__init(
                    typeof(d_discontinuities_internal),typeof(userdata),typeof(save_idxs),
                    typeof(maxiters),typeof(tstops),typeof(saveat),
                    typeof(d_discontinuities)}(
-                       maxiters,timeseries_steps,save_everystep,adaptive,abstol_internal,
+                       maxiters,save_everystep,adaptive,abstol_internal,
                        reltol_internal,QT(gamma),QT(qmax),
                        QT(qmin),QT(qsteady_max),
                        QT(qsteady_min),QT(failfactor),tType(dtmax),
@@ -262,15 +264,17 @@ function DiffEqBase.__init(
                        unstable_check,verbose,
                        calck,force_dtmin,advance_to_tstop,stop_at_next_tstop)
 
+  destats = DiffEqBase.DEStats(0)
+
   if typeof(alg) <: OrdinaryDiffEqCompositeAlgorithm
     sol = DiffEqBase.build_solution(prob,alg,ts,timeseries,
                       dense=dense,k=ks,interp=id,
                       alg_choice=alg_choice,
-                      calculate_error = false)
+                      calculate_error = false, destats=destats)
   else
     sol = DiffEqBase.build_solution(prob,alg,ts,timeseries,
                       dense=dense,k=ks,interp=id,
-                      calculate_error = false)
+                      calculate_error = false, destats=destats)
   end
 
   if recompile_flag == true
@@ -283,6 +287,7 @@ function DiffEqBase.__init(
     cacheType =  OrdinaryDiffEqCache
   end
 
+  eigen_est = 1/oneunit(tType) # rate/state = (state/time)/state = 1/t units
   tprev = t
   dtcache = tType(dt)
   dtpropose = tType(dt)
@@ -290,7 +295,6 @@ function DiffEqBase.__init(
   kshortsize = 0
   reeval_fsal = false
   u_modified = false
-  eigen_est = 1/oneunit(tType) # rate/state = (state/time)/state = 1/t units
   EEst = tTypeNoUnits(1)
   just_hit_tstop = false
   isout = false
@@ -305,7 +309,7 @@ function DiffEqBase.__init(
   erracc = tTypeNoUnits(1)
   dtacc = tType(1)
 
-  integrator = ODEIntegrator{algType,uType,tType,typeof(p),typeof(eigen_est),
+  integrator = ODEIntegrator{algType,isinplace(prob),uType,tType,typeof(p),typeof(eigen_est),
                              QT,typeof(tdir),typeof(k),SolType,
                              FType,cacheType,
                              typeof(opts),fsal_typeof(alg,rate_prototype),
@@ -319,7 +323,7 @@ function DiffEqBase.__init(
                              just_hit_tstop,event_last_time,last_event_error,
                              accept_step,
                              isout,reeval_fsal,
-                             u_modified,opts)
+                             u_modified,opts,destats)
   if initialize_integrator
     initialize_callbacks!(integrator, initialize_save)
     initialize!(integrator,integrator.cache)

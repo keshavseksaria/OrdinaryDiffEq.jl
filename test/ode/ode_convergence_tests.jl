@@ -10,6 +10,7 @@ Random.seed!(100)
 ## Convergence Testing
 dts = 1 .//2 .^(8:-1:4)
 dts1 = 1 .//2 .^(9:-1:5)
+dts2 = 1 .//2 .^(7:-1:3)
 testTol = 0.2
 
 for i = 1:2
@@ -25,10 +26,15 @@ for i = 1:2
   @test sim2.𝒪est[:l∞] ≈ 2 atol=testTol
   sim3 = test_convergence(dts,prob,RK4())
   @test sim3.𝒪est[:l∞] ≈ 4 atol=testTol
+  
+  sim3 = test_convergence(dts2,prob,KuttaPRK2p5(threading=true))
+  @test sim3.𝒪est[:l∞] ≈ 5 atol=testTol
+
+  sim3 = test_convergence(dts2,prob,KuttaPRK2p5(threading=false))
+  @test sim3.𝒪est[:l∞] ≈ 5 atol=testTol
+
   sim4 = test_convergence(dts,prob,BS3())
   @test sim4.𝒪est[:l2] ≈ 3 atol=testTol
-  alg = CarpenterKennedy2N54()
-  @test test_convergence(dts,prob,alg).𝒪est[:l∞] ≈ OrdinaryDiffEq.alg_order(alg) atol=testTol
   sim5 = test_convergence(dts, prob, AB3())
   @test sim5.𝒪est[:l2] ≈ 3 atol=testTol
   sim6 = test_convergence(dts,prob,ABM32())
@@ -163,6 +169,17 @@ for i = 1:2
   @test sim.𝒪est[:final] ≈ 2 atol=testTol
   @test sim.𝒪est[:l2] ≈ 2 atol=testTol
   @test sim.𝒪est[:l∞] ≈ 2 atol=testTol
+  @test_nowarn solve(prob, QNDF())
+
+  # MEBDF2
+  sim21 = test_convergence(dts,prob,MEBDF2(extrapolant = :linear))
+  @test sim21.𝒪est[:final] ≈ 2 atol=testTol
+
+  sim22 = test_convergence(dts,prob,MEBDF2(nlsolve = NLFunctional()))
+  @test sim22.𝒪est[:final] ≈ 2 atol=testTol
+
+  sim23 = test_convergence(dts,prob,MEBDF2(nlsolve = NLAnderson()))
+  @test sim23.𝒪est[:final] ≈ 2 atol=testTol
 
   dts = 1 .//2 .^(7:-1:4)
   println("Higher Order")
@@ -195,4 +212,7 @@ for i = 1:2
 
   sim115 = test_convergence(dts,prob,KenCarp5(nlsolve = NLFunctional()))
   @test_broken sim115.𝒪est[:final] ≈ 5 atol=testTol
+
+  sim116 = test_convergence(dts,prob,ESDIRK54I8L2SA())
+  @test sim116.𝒪est[:final] ≈ 5 atol=testTol
 end

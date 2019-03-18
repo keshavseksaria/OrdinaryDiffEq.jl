@@ -2,6 +2,7 @@ function initialize!(integrator,cache::AN5ConstantCache)
   integrator.kshortsize = 7
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -60,8 +61,8 @@ end
     ################################### Error estimation
 
     if integrator.opts.adaptive
-      atmp = calculate_residuals(cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm)
-      integrator.EEst = integrator.opts.internalnorm(atmp) * cache.c_LTE
+      atmp = calculate_residuals(cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm, t)
+      integrator.EEst = integrator.opts.internalnorm(atmp,t) * cache.c_LTE
       if integrator.EEst > one(integrator.EEst)
         for i in 1:5
           dts[i] = dts[i+1]
@@ -94,6 +95,7 @@ function initialize!(integrator, cache::AN5Cache)
   integrator.k[6] = cache.tsit5cache.k6
   integrator.k[7] = cache.tsit5cache.k7
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 @muladd function perform_step!(integrator, cache::AN5Cache, repeat_step=false)
@@ -149,8 +151,8 @@ end
     ################################### Error estimation
 
     if integrator.opts.adaptive
-      calculate_residuals!(atmp, cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm)
-      integrator.EEst = integrator.opts.internalnorm(atmp) * cache.c_LTE
+      calculate_residuals!(atmp, cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm, t)
+      integrator.EEst = integrator.opts.internalnorm(atmp,t) * cache.c_LTE
       if integrator.EEst > one(integrator.EEst)
         for i in 1:5
           dts[i] = dts[i+1]
@@ -174,6 +176,7 @@ function initialize!(integrator,cache::JVODEConstantCache)
   integrator.kshortsize = 7
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -192,6 +195,7 @@ end
     cache.order = 1
     z[1] = integrator.uprev
     z[2] = f(uprev, p, t)*dt
+    integrator.destats.nf += 1
     dts[1] = dt
   end
   # Reset time
@@ -215,8 +219,8 @@ end
 
   ################################### Error estimation
   if integrator.opts.adaptive
-    atmp = calculate_residuals(cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp) * cache.c_LTE
+    atmp = calculate_residuals(cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm, t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t) * cache.c_LTE
     if integrator.EEst > one(integrator.EEst)
       for i in 1:12
         dts[i] = dts[i+1]
@@ -245,6 +249,7 @@ function initialize!(integrator, cache::JVODECache)
   integrator.k[6] = cache.tsit5cache.k6
   integrator.k[7] = cache.tsit5cache.k7
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 @muladd function perform_step!(integrator, cache::JVODECache, repeat_step=false)
@@ -255,6 +260,7 @@ end
     cache.order = 1
     @. z[1] = integrator.uprev
     f(z[2], uprev, p, t)
+    integrator.destats.nf += 1
     @. z[2] = z[2]*dt
     dts[1] = dt
   end
@@ -282,8 +288,8 @@ end
   ################################### Error estimation
 
   if integrator.opts.adaptive
-    calculate_residuals!(atmp, cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp) * cache.c_LTE
+    calculate_residuals!(atmp, cache.Δ, uprev, integrator.u, integrator.opts.abstol, integrator.opts.reltol, integrator.opts.internalnorm, t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t) * cache.c_LTE
     if integrator.EEst > one(integrator.EEst)
       for i in 1:12
         dts[i] = dts[i+1]

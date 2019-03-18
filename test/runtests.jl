@@ -32,6 +32,7 @@ if group == "All" || group == "Interface"
   @time @safetestset "Export tests" begin include("export_tests.jl") end
   @time @safetestset "Derivative Utilities Tests" begin include("utility_tests.jl") end
   @time @safetestset "Discrete Callback Dual Tests" begin include("discrete_callback_dual_test.jl") end
+  @time @safetestset "DEStats Tests" begin include("destats_tests.jl") end
 end
 
 if group == "All" || group == "Integrators"
@@ -59,18 +60,23 @@ if !is_APPVEYOR && ( group == "All" || group == "AlgConvergence_I" )
   # ~ 50 s
   @time @safetestset "Nordsieck Tests" begin include("ode/nordsieck_tests.jl") end
   @time @safetestset "Linear Methods Tests" begin include("linear_method_tests.jl") end
-  # ~ 170 s
+  @time @safetestset "Extrapolation Tests" begin include("ode/ode_extrapolation_tests.jl") end
+end
+
+if !is_APPVEYOR && ( group == "All" || group == "AlgConvergence_II" )
   @time @safetestset "SSPRK Tests" begin include("ode/ode_ssprk_tests.jl") end
+  @time @safetestset "Low Storage RK Tests" begin include("ode/ode_low_storage_rk_tests.jl") end
   # ~ 25 s
   @time @safetestset "OwrenZen Tests" begin include("owrenzen_tests.jl") end
   @time @safetestset "Runge-Kutta-Chebyshev Tests" begin include("ode/rkc_tests.jl") end
 end
 
-if !is_APPVEYOR && ( group == "All" || group == "AlgConvergence_II" )
+if !is_APPVEYOR && ( group == "All" || group == "AlgConvergence_III" )
   # ~ 110 s
   @time @safetestset "Split Methods Tests" begin include("split_methods_tests.jl") end
   # ~ 550 s
   @time @safetestset "Rosenbrock Tests" begin include("ode/ode_rosenbrock_tests.jl") end
+  @time @safetestset "FIRK Tests" begin include("ode/ode_firk_tests.jl") end
   # ~ 40 s
   @time @safetestset "Linear-Nonlinear Methods Tests" begin include("linear_nonlinear_convergence_tests.jl") end
   # ~ 140 s

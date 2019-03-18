@@ -4,17 +4,18 @@ os:
   - linux
 #  - osx
 julia:
-  - 1.0
-  - nightly
+  - 1.1
+#  - nightly
 env:
   - GROUP=Interface
   - GROUP=Integrators
   - GROUP=Regression
   - GROUP=AlgConvergence_I
   - GROUP=AlgConvergence_II
-matrix:
-  allow_failures:
-    - julia: nightly
+  - GROUP=AlgConvergence_III
+#matrix:
+#  allow_failures:
+#    - julia: nightly
 notifications:
   email: false
 after_success:

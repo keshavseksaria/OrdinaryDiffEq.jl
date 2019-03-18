@@ -28,7 +28,7 @@ module OrdinaryDiffEq
 
   # Required by temporary fix in not in-place methods with 12+ broadcasts
   # `MVector` is used by Nordsieck forms
-  import StaticArrays: SArray, MVector, SVector, @SVector
+  import StaticArrays: SArray, MVector, SVector, @SVector, StaticArray
 
   # Integrator Interface
   import DiffEqBase: resize!,deleteat!,addat!,full_cache,user_cache,u_cache,du_cache,
@@ -53,15 +53,17 @@ module OrdinaryDiffEq
   include("nlsolve/type.jl")
   include("nlsolve/newton.jl")
   include("nlsolve/functional.jl")
-  include("nlsolve/anderson.jl")
+  include("nlsolve/utils.jl")
 
   include("caches/basic_caches.jl")
   include("caches/low_order_rk_caches.jl")
   include("caches/high_order_rk_caches.jl")
+  include("caches/low_storage_rk_caches.jl")
   include("caches/ssprk_caches.jl")
   include("caches/feagin_caches.jl")
   include("caches/verner_caches.jl")
   include("caches/sdirk_caches.jl")
+  include("caches/firk_caches.jl")
   include("caches/kencarp_kvaerno_caches.jl")
   include("caches/generic_implicit_caches.jl")
   include("caches/linear_caches.jl")
@@ -73,6 +75,8 @@ module OrdinaryDiffEq
   include("caches/nordsieck_caches.jl")
   include("caches/bdf_caches.jl")
   include("caches/rkc_caches.jl")
+  include("caches/extrapolation_caches.jl")
+  include("caches/prk_caches.jl")
 
   include("cache_utils.jl")
 
@@ -85,10 +89,12 @@ module OrdinaryDiffEq
   include("tableaus/feagin_tableaus.jl")
   include("tableaus/rosenbrock_tableaus.jl")
   include("tableaus/sdirk_tableaus.jl")
+  include("tableaus/firk_tableaus.jl")
   include("tableaus/rkn_tableaus.jl")
   include("tableaus/rkc_tableaus.jl")
 
   include("integrators/type.jl")
+  include("integrators/controllers.jl")
   include("integrators/integrator_utils.jl")
   include("integrators/integrator_interface.jl")
 
@@ -104,9 +110,11 @@ module OrdinaryDiffEq
   include("perform_step/high_order_rk_perform_step.jl")
   include("perform_step/verner_rk_perform_step.jl")
   include("perform_step/feagin_rk_perform_step.jl")
+  include("perform_step/low_storage_rk_perform_step.jl")
   include("perform_step/ssprk_perform_step.jl")
   include("perform_step/sdirk_perform_step.jl")
   include("perform_step/kencarp_kvaerno_perform_step.jl")
+  include("perform_step/firk_perform_step.jl")
   include("perform_step/generic_implicit_perform_step.jl")
   include("perform_step/rosenbrock_perform_step.jl")
   include("perform_step/threaded_rk_perform_step.jl")
@@ -115,6 +123,8 @@ module OrdinaryDiffEq
   include("perform_step/nordsieck_perform_step.jl")
   include("perform_step/bdf_perform_step.jl")
   include("perform_step/rkc_perform_step.jl")
+  include("perform_step/extrapolation_perform_step.jl")
+  include("perform_step/prk_perform_step.jl")
 
   include("dense/generic_dense.jl")
   include("dense/interpolants.jl")
@@ -145,22 +155,35 @@ module OrdinaryDiffEq
 
   #Callback Necessary
   export ode_addsteps!, addsteps!, ode_interpolant,
-        terminate!, savevalues!, copyat_or_push!, isfsal
+         terminate!, savevalues!, copyat_or_push!, isfsal
 
   export constructDormandPrince
 
   # Reexport the Alg Types
 
-  export FunctionMap, Euler, Heun, Ralston, Midpoint, SSPRK22,
-         SSPRK33, SSPRK53, SSPRK53_2N1,SSPRK53_2N2, SSPRK63, SSPRK73, SSPRK83, SSPRK432, SSPRK932,
-         SSPRK54, SSPRK104, RK4, ExplicitRK, OwrenZen3, OwrenZen4, OwrenZen5,
-         LDDRK64, BS3, BS5, CarpenterKennedy2N54,
-         ORK256, RK46NL, DP5, DP5Threaded, Tsit5, DP8, Vern6, Vern7, Vern8, TanYam7, TsitPap8,
-         Vern9,Feagin10, Feagin12, Feagin14, CompositeAlgorithm, Anas5
+  export FunctionMap, Euler, Heun, Ralston, Midpoint, RK4, ExplicitRK, OwrenZen3, OwrenZen4, OwrenZen5,
+         BS3, BS5, RK46NL, DP5, DP5Threaded, Tsit5, DP8, Vern6, Vern7, Vern8, TanYam7, TsitPap8,
+         Vern9, Feagin10, Feagin12, Feagin14, CompositeAlgorithm, Anas5
+
+  export SSPRK22, SSPRK33, SSPRK53, SSPRK53_2N1, SSPRK53_2N2, SSPRK63, SSPRK73, SSPRK83, SSPRK432,
+         SSPRKMSVS32, SSPRKMSVS43, SSPRK932, SSPRK54, SSPRK104
+
+  export ORK256, CarpenterKennedy2N54, HSLDDRK64, DGLDDRK73_C, DGLDDRK84_C, DGLDDRK84_F, NDBLSRK124, NDBLSRK134, NDBLSRK144,
+         CFRLDDRK64, TSLDDRK74,
+         CKLLSRK43_2,CKLLSRK54_3C,CKLLSRK95_4S,CKLLSRK95_4C,CKLLSRK95_4M,
+         CKLLSRK54_3C_3R, CKLLSRK54_3M_3R, CKLLSRK54_3N_3R, CKLLSRK85_4C_3R, CKLLSRK85_4M_3R, CKLLSRK85_4P_3R,
+         CKLLSRK54_3N_4R, CKLLSRK54_3M_4R, CKLLSRK65_4M_4R, CKLLSRK85_4FM_4R, CKLLSRK75_4M_5R,
+         ParsaniKetchesonDeconinck3S32, ParsaniKetchesonDeconinck3S82,
+         ParsaniKetchesonDeconinck3S53, ParsaniKetchesonDeconinck3S173,
+         ParsaniKetchesonDeconinck3S94, ParsaniKetchesonDeconinck3S184,
+         ParsaniKetchesonDeconinck3S105, ParsaniKetchesonDeconinck3S205,
+         KYK2014DGSSPRK_3S2
+
+  export RadauIIA5
 
   export ImplicitEuler, ImplicitMidpoint, Trapezoid, TRBDF2, SDIRK2, Kvaerno3,
          KenCarp3, Cash4, Hairer4, Hairer42, SSPSDIRK2, Kvaerno4, Kvaerno5,
-         KenCarp4, KenCarp5
+         KenCarp4, KenCarp5, ESDIRK54I8L2SA
 
   export GenericImplicitEuler, GenericTrapezoid
 
@@ -183,7 +206,7 @@ module OrdinaryDiffEq
   export Nystrom4, Nystrom4VelocityIndependent, Nystrom5VelocityIndependent,
          IRKN3, IRKN4, DPRKN6, DPRKN8, DPRKN12, ERKN4, ERKN5
 
-  export ROCK2
+  export ROCK2, ROCK4, RKC, IRKC, ESERK5
 
   export AB3, AB4, AB5, ABM32, ABM43, ABM54
 
@@ -199,8 +222,14 @@ module OrdinaryDiffEq
 
   export SBDF2, SBDF3, SBDF4
 
+  export MEBDF2
+
   export AutoSwitch, AutoTsit5, AutoDP5,
          AutoVern6, AutoVern7, AutoVern8, AutoVern9
 
-  export NLNewton, NLAnderson, NLFunctional
+  export AitkenNeville
+
+  export KuttaPRK2p5
+
+  export NLNewton, NLFunctional, NLAnderson
 end # module

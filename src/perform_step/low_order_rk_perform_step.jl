@@ -2,6 +2,7 @@ function initialize!(integrator, cache::BS3ConstantCache)
   integrator.kshortsize = 2
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -19,10 +20,11 @@ end
   k3 = f(uprev+a2*k2, p, t+c2*dt)
   u = uprev+dt*(a41*k1+a42*k2+a43*k3)
   k4 = f(u, p, t+dt); integrator.fsallast = k4
+  integrator.destats.nf += 3
   if integrator.opts.adaptive
     utilde = dt*(btilde1*k1 + btilde2*k2 + btilde3*k3 + btilde4*k4)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1] = integrator.fsalfirst
   integrator.k[2] = integrator.fsallast
@@ -37,6 +39,7 @@ function initialize!(integrator, cache::BS3Cache)
   integrator.k[1] = integrator.fsalfirst
   integrator.k[2] = integrator.fsallast
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 @muladd function perform_step!(integrator, cache::BS3Cache, repeat_step=false)
@@ -53,10 +56,11 @@ end
   f(k3, tmp, p, t+c2*dt)
   @. u = uprev+dt*(a41*k1+a42*k2+a43*k3)
   f(k4, u, p, t+dt)
+  integrator.destats.nf += 3
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde2*k2 + btilde3*k3 + btilde4*k4)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 
@@ -64,6 +68,7 @@ function initialize!(integrator, cache::OwrenZen3ConstantCache)
     integrator.kshortsize = 4
     integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
     integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+    integrator.destats.nf += 1
 
     # Avoid undefined entries if k is an array of arrays
     integrator.fsallast = zero(integrator.fsalfirst)
@@ -84,10 +89,11 @@ end
   k3 = f(tmp, p, t+c2*dt)
   u =  uprev+dt*(a41*k1+a42*k2+a43*k3)
   k4 = f(u, p, t+dt); integrator.fsallast = k4
+  integrator.destats.nf += 3
   if integrator.opts.adaptive
     utilde =  dt*(btilde1*k1 + btilde2*k2 + btilde3*k3)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1]=k1; integrator.k[2]=k2; integrator.k[3]=k3; integrator.k[4]=k4
   integrator.u = u
@@ -100,6 +106,7 @@ function initialize!(integrator, cache::OwrenZen3Cache)
     integrator.k[3]=cache.k3; integrator.k[4]=cache.k4;
     integrator.fsalfirst = cache.k1; integrator.fsallast = cache.k4  # setup pointers
     integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+    integrator.destats.nf += 1
 end
 
 @muladd function perform_step!(integrator, cache::OwrenZen3Cache, repeat_step=false)
@@ -113,10 +120,11 @@ end
   f(k3, tmp, p, t+c2*dt)
   @. u = uprev+dt*(a41*k1+a42*k2+a43*k3)
   f(k4, u, p, t+dt)
+  integrator.destats.nf += 3
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde2*k2 + btilde3*k3)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 
@@ -124,6 +132,7 @@ function initialize!(integrator, cache::OwrenZen4ConstantCache)
   integrator.kshortsize = 6
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev,integrator.p,integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -145,10 +154,11 @@ end
   k5 = f(uprev+dt*(a51*k1+a52*k2+a53*k3+a54*k4), p, t+c4*dt)
   u = uprev+dt*(a61*k1+a63*k3+a64*k4+a65*k5)
   k6 = f(u, p, t+dt); integrator.fsallast = k6
+  integrator.destats.nf += 5
   if integrator.opts.adaptive
     utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1]=k1; integrator.k[2]=k2; integrator.k[3]=k3; integrator.k[4]=k4;
   integrator.k[5]=k5; integrator.k[6]=k6
@@ -163,6 +173,7 @@ function initialize!(integrator,cache::OwrenZen4Cache,f=integrator.f)
   integrator.k[5]=cache.k5; integrator.k[6]=cache.k6;
   integrator.fsalfirst = cache.k1; integrator.fsallast = cache.k6  # setup pointers
   f(integrator.fsalfirst,integrator.uprev,integrator.p,integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 #=
@@ -183,8 +194,8 @@ end
   f(k6, u, p, t+dt)
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 =#
@@ -215,12 +226,13 @@ end
     @inbounds u[i] = uprev[i]+dt*(a61*k1[i]+a63*k3[i]+a64*k4[i]+a65*k5[i])
   end
   f(k6, u, p, t+dt)
+  integrator.destats.nf += 5
   if integrator.opts.adaptive
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(btilde1*k1[i] + btilde3*k3[i] + btilde4*k4[i] + btilde5*k5[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 
@@ -228,6 +240,7 @@ function initialize!(integrator, cache::OwrenZen5ConstantCache)
   integrator.kshortsize = 8
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -251,10 +264,11 @@ end
   k7 = f(uprev+dt*(a71*k1+a72*k2+a73*k3+a74*k4+a75*k5+a76*k6), p, t+c6*dt)
   u = uprev+dt*(a81*k1+a83*k3+a84*k4+a85*k5+a86*k6+a87*k7)
   k8 = f(u, p, t+dt); integrator.fsallast = k8
+  integrator.destats.nf += 7
   if integrator.opts.adaptive
     utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1]=k1; integrator.k[2]=k2; integrator.k[3]=k3; integrator.k[4]=k4
   integrator.k[5]=k5; integrator.k[6]=k6; integrator.k[7]=k7; integrator.k[8]=k8
@@ -270,6 +284,7 @@ function initialize!(integrator, cache::OwrenZen5Cache)
   integrator.k[7]=cache.k7; integrator.k[8]=cache.k8;
   integrator.fsalfirst = cache.k1; integrator.fsallast = cache.k8  # setup pointers
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 #=
@@ -294,8 +309,8 @@ end
   f(k8, u, p, t+dt)
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 =#
@@ -334,12 +349,13 @@ end
     @inbounds u[i] = uprev[i]+dt*(a81*k1[i]+a83*k3[i]+a84*k4[i]+a85*k5[i]+a86*k6[i]+a87*k7[i])
   end
   f(k8, u, p, t+dt)
+  integrator.destats.nf += 7
   if integrator.opts.adaptive
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(btilde1*k1[i] + btilde3*k3[i] + btilde4*k4[i] + btilde5*k5[i] + btilde6*k6[i] + btilde7*k7[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 
@@ -348,6 +364,7 @@ function initialize!(integrator, cache::BS5ConstantCache)
   alg.lazy ? (integrator.kshortsize = 8) : (integrator.kshortsize = 11)
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -376,15 +393,17 @@ end
   k5 = f(uprev+dt*(a51*k1+a52*k2+a53*k3+a54*k4), p, t+c4*dt)
   k6 = f(uprev+dt*(a61*k1+a62*k2+a63*k3+a64*k4+a65*k5), p, t+c5*dt)
   k7 = f(uprev+dt*(a71*k1+a72*k2+a73*k3+a74*k4+a75*k5+a76*k6), p, t+dt)
+  integrator.destats.nf += 6
   u = uprev+dt*(a81*k1+a83*k3+a84*k4+a85*k5+a86*k6+a87*k7)
   integrator.fsallast = f(u, p, t+dt); k8 = integrator.fsallast
+  integrator.destats.nf += 1
   if integrator.opts.adaptive
     uhat   = dt*(bhat1*k1 + bhat3*k3 + bhat4*k4 + bhat5*k5 + bhat6*k6)
     utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7 + btilde8*k8)
-    atmp = calculate_residuals(uhat, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst1 = integrator.opts.internalnorm(atmp)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst2 = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(uhat, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst1 = integrator.opts.internalnorm(atmp,t)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst2 = integrator.opts.internalnorm(atmp,t)
     integrator.EEst = max(EEst1,EEst2)
   end
   integrator.k[1]=k1; integrator.k[2]=k2; integrator.k[3]=k3;integrator.k[4]=k4;integrator.k[5]=k5;integrator.k[6]=k6;integrator.k[7]=k7;integrator.k[8]=k8
@@ -397,6 +416,7 @@ end
     k[9] = f(uprev+dt*(a91*k[1]+a92*k[2]+a93*k[3]+a94*k[4]+a95*k[5]+a96*k[6]+a97*k[7]+a98*k[8]),p,t+c6*dt)
     k[10] = f(uprev+dt*(a101*k[1]+a102*k[2]+a103*k[3]+a104*k[4]+a105*k[5]+a106*k[6]+a107*k[7]+a108*k[8]+a109*k[9]),p,t+c7*dt)
     k[11] = f(uprev+dt*(a111*k[1]+a112*k[2]+a113*k[3]+a114*k[4]+a115*k[5]+a116*k[6]+a117*k[7]+a118*k[8]+a119*k[9]+a1110*k[10]),p,t+c8*dt)
+    integrator.destats.nf += 3
   end
 end
 
@@ -417,6 +437,7 @@ function initialize!(integrator, cache::BS5Cache)
 
   integrator.fsalfirst = cache.k1; integrator.fsallast = cache.k8  # setup pointers
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 #=
@@ -441,11 +462,11 @@ end
   f(k8, u, p, t+dt)
   if integrator.opts.adaptive
     @. utilde = dt*(bhat1*k1 + bhat3*k3 + bhat4*k4 + bhat5*k5 + bhat6*k6)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst1 = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst1 = integrator.opts.internalnorm(atmp,t)
     @. utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7 + btilde8*k8)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst2 = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst2 = integrator.opts.internalnorm(atmp,t)
     integrator.EEst = max(EEst1,EEst2)
   end
 end
@@ -485,17 +506,18 @@ end
     @inbounds u[i] = uprev[i]+dt*(a81*k1[i]+a83*k3[i]+a84*k4[i]+a85*k5[i]+a86*k6[i]+a87*k7[i])
   end
   f(k8, u, p, t+dt)
+  integrator.destats.nf += 7
   if integrator.opts.adaptive
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(bhat1*k1[i] + bhat3*k3[i] + bhat4*k4[i] + bhat5*k5[i] + bhat6*k6[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst1 = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst1 = integrator.opts.internalnorm(atmp,t)
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(btilde1*k1[i] + btilde3*k3[i] + btilde4*k4[i] + btilde5*k5[i] + btilde6*k6[i] + btilde7*k7[i] + btilde8*k8[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    EEst2 = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    EEst2 = integrator.opts.internalnorm(atmp,t)
     integrator.EEst = max(EEst1,EEst2)
   end
 
@@ -515,6 +537,7 @@ end
       @inbounds tmp[i] = uprev[i]+dt*(a111*k[1][i]+a112*k[2][i]+a113*k[3][i]+a114*k[4][i]+a115*k[5][i]+a116*k[6][i]+a117*k[7][i]+a118*k[8][i]+a119*k[9][i]+a1110*k[10][i])
     end
     f(k[11],tmp,p,t+c8*dt)
+    integrator.destats.nf += 3
   end
 end
 
@@ -522,6 +545,7 @@ function initialize!(integrator, cache::Tsit5ConstantCache)
   integrator.kshortsize = 7
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -545,15 +569,16 @@ end
   k6 = f(g6, p, t+dt)
   u = uprev+dt*(a71*k1+a72*k2+a73*k3+a74*k4+a75*k5+a76*k6)
   integrator.fsallast = f(u, p, t+dt); k7 = integrator.fsallast
+  integrator.destats.nf += 6
   if typeof(integrator.alg) <: CompositeAlgorithm
     g7 = u
     # Hairer II, page 22
-    integrator.eigen_est = integrator.opts.internalnorm(k7 - k6)/integrator.opts.internalnorm(g7 - g6)
+    integrator.eigen_est = integrator.opts.internalnorm(k7 - k6,t)/integrator.opts.internalnorm(g7 - g6,t)
   end
   if integrator.opts.adaptive
     utilde = dt*(btilde1*k1 + btilde2*k2 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1] = k1
   integrator.k[2] = k2
@@ -578,6 +603,7 @@ function initialize!(integrator, cache::Tsit5Cache)
   integrator.k[6] = cache.k6
   integrator.k[7] = cache.k7
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 #=
@@ -600,8 +626,8 @@ end
   f(k7, u, p, t+dt)
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde2*k2 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 =#
@@ -636,22 +662,23 @@ end
     @inbounds u[i] = uprev[i]+dt*(a71*k1[i]+a72*k2[i]+a73*k3[i]+a74*k4[i]+a75*k5[i]+a76*k6[i])
   end
   f(k7, u, p, t+dt)
+  integrator.destats.nf += 6
   if typeof(integrator.alg) <: CompositeAlgorithm
     g7 = u
     g6 = tmp
     # Hairer II, page 22
     @. utilde = k7 - k6
-    ϱu = integrator.opts.internalnorm(utilde)
+    ϱu = integrator.opts.internalnorm(utilde,t)
     @. utilde = g7 - g6
-    ϱd = integrator.opts.internalnorm(utilde)
+    ϱd = integrator.opts.internalnorm(utilde,t)
     integrator.eigen_est = ϱu/ϱd
   end
   if integrator.opts.adaptive
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(btilde1*k1[i] + btilde2*k2[i] + btilde3*k3[i] + btilde4*k4[i] + btilde5*k5[i] + btilde6*k6[i] + btilde7*k7[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
 end
 
@@ -659,6 +686,7 @@ function initialize!(integrator, cache::DP5ConstantCache)
   integrator.kshortsize = 4
   integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
   integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 
   # Avoid undefined entries if k is an array of arrays
   integrator.fsallast = zero(integrator.fsalfirst)
@@ -682,15 +710,16 @@ end
   update = a71*k1+a73*k3+a74*k4+a75*k5+a76*k6
   u = uprev+dt*update
   integrator.fsallast = f(u, p, t+dt); k7 = integrator.fsallast
+  integrator.destats.nf += 6
   if typeof(integrator.alg) <: CompositeAlgorithm
     g7 = u
     # Hairer II, page 22
-    integrator.eigen_est = integrator.opts.internalnorm(k7 - k6)/integrator.opts.internalnorm(g7 - g6)
+    integrator.eigen_est = integrator.opts.internalnorm(k7 - k6,t)/integrator.opts.internalnorm(g7 - g6,t)
   end
   if integrator.opts.adaptive
     utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    atmp = calculate_residuals(utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   integrator.k[1] = update
   bspl = k1 - update
@@ -709,6 +738,7 @@ function initialize!(integrator, cache::DP5Cache)
   integrator.k[4] = cache.dense_tmp4
   integrator.fsalfirst = cache.k1; integrator.fsallast = cache.k7
   integrator.f(integrator.fsalfirst, integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+  integrator.destats.nf += 1
 end
 
 #=
@@ -733,8 +763,8 @@ end
   f(k7, u, p, t+dt);
   if integrator.opts.adaptive
     @. utilde = dt*(btilde1*k1 + btilde3*k3 + btilde4*k4 + btilde5*k5 + btilde6*k6 + btilde7*k7)
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   @. bspl = k1 - update
   @. integrator.k[4] = d1*k1+d3*k3+d4*k4+d5*k5+d6*k6+d7*k7
@@ -774,6 +804,7 @@ end
     @inbounds u[i] = uprev[i]+dt*update[i]
   end
   f(k7, u, p, t+dt)
+  integrator.destats.nf += 6
   if typeof(integrator.alg) <: CompositeAlgorithm
     g6 = tmp
     g7 = u
@@ -789,8 +820,8 @@ end
     @tight_loop_macros for i in uidx
       @inbounds utilde[i] = dt*(btilde1*k1[i] + btilde3*k3[i] + btilde4*k4[i] + btilde5*k5[i] + btilde6*k6[i] + btilde7*k7[i])
     end
-    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm)
-    integrator.EEst = integrator.opts.internalnorm(atmp)
+    calculate_residuals!(atmp, utilde, uprev, u, integrator.opts.abstol, integrator.opts.reltol,integrator.opts.internalnorm,t)
+    integrator.EEst = integrator.opts.internalnorm(atmp,t)
   end
   if integrator.opts.calck
     @tight_loop_macros for i in uidx
@@ -802,4 +833,60 @@ end
       @inbounds integrator.k[3][i] = update[i] - k7[i] - bspl[i]
     end
   end
+end
+
+function initialize!(integrator,cache::KYK2014DGSSPRK_3S2_ConstantCache)
+ integrator.fsalfirst = integrator.f(integrator.uprev, integrator.p, integrator.t) # Pre-start fsal
+ integrator.kshortsize = 2
+ integrator.k = typeof(integrator.k)(undef, integrator.kshortsize)
+
+ # Avoid undefined entries if k is an array of arrays
+ integrator.fsallast = zero(integrator.fsalfirst)
+end
+
+@muladd function perform_step!(integrator,cache::KYK2014DGSSPRK_3S2_ConstantCache,repeat_step=false)
+ @unpack t,dt,uprev,u,f,p = integrator
+ @unpack α_10, α_20, α_21, α_30, α_32, β_10, β_21, β_30, β_32, c_1, c_2 = cache
+ u_1 =  α_10 * uprev + dt*β_10*integrator.fsalfirst
+ u_2 = (
+  α_20 * uprev +
+  α_21 * u_1 + dt*β_21*f(u_1, p, t + c_1*dt)
+ )
+ integrator.u = (
+  α_30 * uprev + dt*β_30*integrator.fsalfirst +
+  α_32 * u_2 + dt*β_32*f(u_2, p, t + c_2*dt)
+ )
+ integrator.k[1] = integrator.fsalfirst
+ integrator.k[2] = f(integrator.u, p, t+dt) # For interpolation, then FSAL'd
+ integrator.fsallast = integrator.k[2]
+end
+
+function initialize!(integrator,cache::KYK2014DGSSPRK_3S2_Cache)
+ @unpack k,fsalfirst = cache
+ integrator.fsalfirst = fsalfirst
+ integrator.fsallast = k
+ integrator.kshortsize = 2
+ resize!(integrator.k, integrator.kshortsize)
+ integrator.k[1] = integrator.fsalfirst
+ integrator.k[2] = integrator.fsallast
+ integrator.f(integrator.fsalfirst,integrator.uprev,integrator.p,integrator.t) # FSAL for interpolation
+end
+
+@muladd function perform_step!(integrator,cache::KYK2014DGSSPRK_3S2_Cache,repeat_step=false)
+ @unpack t,dt,uprev,u,f,p = integrator
+ @unpack k,fsalfirst,u_1,u_2, kk_1, kk_2 = cache
+ @unpack α_10, α_20, α_21, α_30, α_32, β_10, β_21, β_30, β_32, c_1, c_2 = cache.tab
+
+ @. u_1 =  α_10 * uprev + dt*β_10*integrator.fsalfirst
+ f(kk_1, u_1, p, t + c_1*dt)
+ @. u_2 = (
+  α_20 * uprev +
+  α_21 * u_1 + dt*β_21*kk_1
+ )
+ f(kk_2, u_2, p, t + c_2*dt)
+ integrator.u .= (
+  α_30 * uprev + dt*β_30*integrator.fsalfirst +
+  α_32 * u_2 + dt*β_32*kk_2
+ )
+ f(integrator.k[2], integrator.u, p, t+dt) # For interpolation, then FSAL'd
 end

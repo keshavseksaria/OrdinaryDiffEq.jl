@@ -1,5 +1,5 @@
 save_idxsinitialize(integrator,cache::OrdinaryDiffEqCache,::Type{uType}) where {uType} =
-                error("This algorithm does not have an initialization function")
+               error("This algorithm does not have an initialization function")
 
 function loopheader!(integrator)
   # Apply right after iterators / callbacks
@@ -87,7 +87,7 @@ function savevalues!(integrator::ODEIntegrator,force_save=false,reduce_size=true
       end
     end
   end
-  if force_save || (integrator.opts.save_everystep && integrator.iter%integrator.opts.timeseries_steps==0)
+  if force_save || integrator.opts.save_everystep
     integrator.saveiter += 1; saved, savedexactly = true, true
     if integrator.opts.save_idxs === nothing
       copyat_or_push!(integrator.sol.u,integrator.saveiter,integrator.u)
@@ -152,143 +152,6 @@ function solution_endpoint_match_cur_integrator!(integrator)
   end
 end
 
-### Default is PI-controller
-function stepsize_controller!(integrator,alg)
-  # PI-controller
-  EEst,beta1,q11,qold,beta2 = integrator.EEst, integrator.opts.beta1, integrator.q11,integrator.qold,integrator.opts.beta2
-  if iszero(EEst)
-    q = inv(integrator.opts.qmax)
-  else
-    @fastmath q11 = EEst^beta1
-    @fastmath q = q11/(qold^beta2)
-    integrator.q11 = q11
-    @fastmath q = max(inv(integrator.opts.qmax),min(inv(integrator.opts.qmin),q/integrator.opts.gamma))
-    if q <= integrator.opts.qsteady_max && q >= integrator.opts.qsteady_min
-      q = one(q)
-    end
-  end
-  q
-end
-
-function step_accept_controller!(integrator,alg,q)
-  integrator.qold = max(integrator.EEst,integrator.opts.qoldinit)
-  integrator.dt/q #dtnew
-end
-function step_reject_controller!(integrator,alg)
-  integrator.dt = integrator.dt/min(inv(integrator.opts.qmin),integrator.q11/integrator.opts.gamma)
-end
-
-const StandardControllerAlgs = Union{GenericImplicitEuler,GenericTrapezoid,VCABM}
-#const NordAlgs = Union{AN5, JVODE}
-
-function stepsize_controller!(integrator, alg::JVODE)
-  #η = choose_η!(integrator, integrator.cache)
-  if iszero(integrator.EEst)
-    η = integrator.opts.qmax
-  else
-    η = integrator.cache.η
-    integrator.qold = η
-  end
-  η
-end
-function step_accept_controller!(integrator,alg::JVODE,η)
-  return η * integrator.dt  # dtnew
-end
-function step_reject_controller!(integrator,alg::JVODE)
-  integrator.dt *= integrator.qold
-end
-
-function stepsize_controller!(integrator, alg::QNDF)
-  cnt = integrator.iter
-  if cnt <= 3
-    # std controller
-    if iszero(integrator.EEst)
-      q = inv(integrator.opts.qmax)
-    else
-      qtmp = integrator.EEst^(1/(get_current_adaptive_order(integrator.alg,integrator.cache)+1))/integrator.opts.gamma
-      @fastmath q = max(inv(integrator.opts.qmax),min(inv(integrator.opts.qmin),qtmp))
-      integrator.qold = integrator.dt/q
-    end
-  else
-    q = integrator.dt/integrator.cache.h
-    integrator.qold = integrator.dt/q
-  end
-  q
-end
-
-function step_accept_controller!(integrator,alg::QNDF,q)
-  return integrator.dt/q  # dtnew
-end
-function step_reject_controller!(integrator,alg::QNDF)
-  integrator.dt = integrator.qold
-end
-
-
-function stepsize_controller!(integrator,alg::Union{StandardControllerAlgs,
-                              OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Standard}})
-  # Standard stepsize controller
-  if iszero(integrator.EEst)
-    q = inv(integrator.opts.qmax)
-  else
-    qtmp = integrator.EEst^(1/(get_current_adaptive_order(integrator.alg,integrator.cache)+1))/integrator.opts.gamma
-    @fastmath q = max(inv(integrator.opts.qmax),min(inv(integrator.opts.qmin),qtmp))
-    integrator.qold = integrator.dt/q
-  end
-  q
-end
-function step_accept_controller!(integrator,alg::Union{StandardControllerAlgs,
-                              OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Standard}},q)
-  integrator.dt/q # dtnew
-end
-function step_reject_controller!(integrator,alg::Union{StandardControllerAlgs,
-                              OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Standard}})
-  integrator.dt = integrator.qold
-end
-
-function stepsize_controller!(integrator,
-                        alg::OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Predictive})
-
-  # Gustafsson predictive stepsize controller
-
-  if iszero(integrator.EEst)
-    q = inv(integrator.opts.qmax)
-  else
-    gamma = integrator.opts.gamma
-    niters = integrator.cache.newton_iters
-    fac = min(gamma,(1+2*integrator.alg.max_newton_iter)*gamma/(niters+2*integrator.alg.max_newton_iter))
-    expo = 1/(get_current_alg_order(integrator.alg,integrator.cache)+1)
-    qtmp = (integrator.EEst^expo)/fac
-    @fastmath q = max(inv(integrator.opts.qmax),min(inv(integrator.opts.qmin),qtmp))
-    if q <= integrator.opts.qsteady_max && q >= integrator.opts.qsteady_min
-      q = one(q)
-    end
-    integrator.qold = q
-  end
-  q
-end
-function step_accept_controller!(integrator,
-                      alg::OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Predictive},q)
-  if integrator.success_iter > 0
-    expo = 1/(get_current_adaptive_order(integrator.alg,integrator.cache)+1)
-    qgus=(integrator.dtacc/integrator.dt)*(((integrator.EEst^2)/integrator.erracc)^expo)
-    qgus = max(inv(integrator.opts.qmax),min(inv(integrator.opts.qmin),qgus/integrator.opts.gamma))
-    qacc=max(q,qgus)
-  else
-    qacc = q
-  end
-  integrator.dtacc = integrator.dt
-  integrator.erracc = max(1e-2,integrator.EEst)
-  integrator.dt/qacc
-end
-function step_reject_controller!(integrator,
-                        alg::OrdinaryDiffEqNewtonAdaptiveAlgorithm{:Predictive})
-  if integrator.success_iter == 0
-    integrator.dt *= 0.1
-  else
-    integrator.dt = integrator.dt/integrator.qold
-  end
-end
-
 function loopfooter!(integrator)
 
   # Carry-over from callback
@@ -296,7 +159,6 @@ function loopfooter!(integrator)
   # But not set to false when reset so algorithms can check if reset occurred
   integrator.reeval_fsal = false
   integrator.u_modified = false
-
   ttmp = integrator.t + integrator.dt
   if integrator.force_stepfail
       if integrator.opts.adaptive
@@ -311,6 +173,7 @@ function loopfooter!(integrator)
     integrator.isout = integrator.opts.isoutofdomain(integrator.u,integrator.p,ttmp)
     integrator.accept_step = (!integrator.isout && integrator.EEst <= 1.0) || (integrator.opts.force_dtmin && abs(integrator.dt) <= abs(integrator.opts.dtmin))
     if integrator.accept_step # Accept
+      integrator.destats.naccept += 1
       integrator.last_stepfail = false
       dtnew = step_accept_controller!(integrator,integrator.alg,q)
       integrator.tprev = integrator.t
@@ -324,8 +187,11 @@ function loopfooter!(integrator)
       end
       calc_dt_propose!(integrator,dtnew)
       handle_callbacks!(integrator)
+    else # Reject
+      integrator.destats.nreject += 1
     end
   elseif !integrator.opts.adaptive #Not adaptive
+    integrator.destats.naccept += 1
     integrator.tprev = integrator.t
     # integrator.EEst has unitless type of integrator.t
     if typeof(integrator.EEst)<: AbstractFloat && !isempty(integrator.opts.tstops)
@@ -347,6 +213,8 @@ function loopfooter!(integrator)
     message=integrator.opts.progress_message(integrator.dt,integrator.u,integrator.p,integrator.t),
     progress=integrator.t/integrator.sol.prob.tspan[2])
   end
+  (integrator.cache isa CompositeCache && integrator.eigen_est > integrator.destats.maxeig) && (integrator.destats.maxeig = integrator.eigen_est)
+  nothing
 end
 
 function handle_callbacks!(integrator)
@@ -472,6 +340,7 @@ end
 
 function reset_fsal!(integrator)
   # Under these condtions, these algorithms are not FSAL anymore
+  integrator.destats.nf += 1
   if typeof(integrator.cache) <: OrdinaryDiffEqMutableCache ||
      (typeof(integrator.cache) <: CompositeCache &&
       typeof(integrator.cache.caches[1]) <: OrdinaryDiffEqMutableCache)
@@ -482,6 +351,12 @@ function reset_fsal!(integrator)
   # Do not set false here so it can be checked in the algorithm
   # integrator.reeval_fsal = false
 end
+
+nlsolve!(integrator, cache) = nlsolve!(cache.nlsolver, cache.nlsolver.cache, integrator)
+
+nlsolve_f(f, alg) = f isa SplitFunction && issplit(alg) ? f.f1 : f
+nlsolve_f(integrator) =
+  nlsolve_f(integrator.f, unwrap_alg(integrator, true))
 
 function (integrator::ODEIntegrator)(t,deriv::Type=Val{0};idxs=nothing)
   current_interpolant(t,integrator,idxs,deriv)

@@ -1,53 +1,87 @@
-abstract type AbstractNLsolveSolver end
-abstract type AbstractNLsolveCache end
-mutable struct NLSolverCache{rateType,uType,W,uToltype,cType,gType} <: AbstractNLsolveCache
-  κ::uToltype
-  tol::uToltype
-  min_iter::Int
-  max_iter::Int
-  nl_iters::Int
-  new_W::Bool
+abstract type AbstractNLSolverAlgorithm end
+abstract type AbstractNLSolverCache end
+
+# solver
+
+mutable struct NLSolver{iip,uType,rateType,uTolType,gType,cType,C<:AbstractNLSolverCache}
   z::uType
-  W::W # NLNewton -> `W` operator; NLAnderson -> Vectors; NLFunctional -> Nothing
-  γ::gType
-  c::cType
-  ηold::uToltype
-  # The following fields will alias for immutable cache
-  z₊::uType # Only used in `NLAnderson` and `NLFunctional`
   dz::uType
   tmp::uType
-  b::uType # can be aliased with `k` if no unit
+  ztmp::uType
   k::rateType
+  ηold::uTolType
+  κtol::uTolType
+  γ::gType
+  c::cType
+  max_iter::Int
+  nl_iters::Int
+  cache::C
 end
 
-struct NLFunctional{iip,T<:NLSolverCache} <: AbstractNLsolveSolver
-  cache::T
-end
-struct NLAnderson{iip,T<:NLSolverCache} <: AbstractNLsolveSolver
-  cache::T
-  n::Int
-  NLAnderson{iip,T}(nlcache::T, n=5) where {iip, T<:NLSolverCache} = new(nlcache, n)
-end
-struct NLNewton{iip,T<:NLSolverCache} <: AbstractNLsolveSolver
-  cache::T
+# algorithms
+
+struct NLFunctional{K,T} <: AbstractNLSolverAlgorithm
+  κ::K
+  tol::T
+  max_iter::Int
 end
 
-NLSolverCache(;κ=nothing, tol=nothing, min_iter=1, max_iter=10) =
-NLSolverCache(κ, tol, min_iter, max_iter, 0, true,
-              ntuple(i->nothing, 4)...,
-              κ === nothing ? κ : zero(κ),
-              ntuple(i->nothing, 5)...)
+NLFunctional(; κ=nothing, tol=nothing, max_iter=10) = NLFunctional(κ, tol, max_iter)
 
-# Default `iip` to `true`, but the whole type will be reinitialized in `alg_cache`
-function NLFunctional(;kwargs...)
-  nlcache = NLSolverCache(;kwargs...)
-  NLFunctional{true, typeof(nlcache)}(nlcache)
+struct NLAnderson{K,T,D} <: AbstractNLSolverAlgorithm
+  κ::K
+  tol::T
+  max_iter::Int
+  max_history::Int
+  aa_start::Int
+  droptol::D
 end
-function NLAnderson(n=5; kwargs...)
-  nlcache = NLSolverCache(;kwargs...)
-  NLAnderson{true, typeof(nlcache)}(nlcache, n)
+
+NLAnderson(; κ=nothing, tol=nothing, max_iter=10, max_history::Int=5, aa_start::Int=1, droptol=nothing) =
+  NLAnderson(κ, tol, max_iter, max_history, aa_start, droptol)
+
+struct NLNewton{K,T} <: AbstractNLSolverAlgorithm
+  κ::K
+  tol::T
+  max_iter::Int
 end
-function NLNewton(;kwargs...)
-  nlcache = NLSolverCache(;kwargs...)
-  NLNewton{true, typeof(nlcache)}(nlcache)
+
+NLNewton(; κ=nothing, tol=nothing, max_iter=10) = NLNewton(κ, tol, max_iter)
+
+# caches
+
+mutable struct NLNewtonCache{W} <: AbstractNLSolverCache
+  new_W::Bool
+  W::W
+end
+
+mutable struct NLNewtonConstantCache{W} <: AbstractNLSolverCache
+  W::W
+end
+
+struct NLFunctionalCache{uType} <: AbstractNLSolverCache
+  z₊::uType
+end
+
+struct NLFunctionalConstantCache <: AbstractNLSolverCache end
+
+mutable struct NLAndersonCache{uType,gsType,QType,RType,gType,D} <: AbstractNLSolverCache
+  z₊::uType
+  dzold::uType
+  z₊old::uType
+  Δz₊s::gsType
+  Q::QType
+  R::RType
+  γs::gType
+  aa_start::Int
+  droptol::D
+end
+
+mutable struct NLAndersonConstantCache{gsType,QType,RType,gType,D} <: AbstractNLSolverCache
+  Δz₊s::gsType
+  Q::QType
+  R::RType
+  γs::gType
+  aa_start::Int
+  droptol::D
 end
